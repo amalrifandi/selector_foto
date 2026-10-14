@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Culling Studio Ultimate (Compare, RAW Badge, Search & Progress)</title>
+    <style>
+        :root {
+            --bg-dark: #0f0f0f;
+            --bg-panel: #1a1a1a;
+            --bg-card: #242424;
+            --text-main: #e5e5e5;
+            --text-muted: #888888;
+            --accent: #3b82f6;
+            --pick: #10b981;
+            --review: #f59e0b;
+            --reject: #ef4444;
+            --border: #303030;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Header */
+        header {
+            background-color: var(--bg-panel);
+            padding: 8px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .brand-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .brand {
+            font-size: 0.98rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .view-switcher {
+            display: flex;
+            background: var(--bg-dark);
+            padding: 3px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            gap: 3px;
+        }
+
+        .search-box {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-box input {
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 6px 26px 6px 10px;
+            border-radius: 6px;
+            font-size: 0.76rem;
+            width: 170px;
+            transition: border-color 0.2s, width 0.2s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--accent);
+            width: 210px;
+        }
+
+        .search-clear {
+            position: absolute;
+            right: 7px;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.75rem;
+            display: none;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 6px 11px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.76rem;
+            font-weight: 500;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn:hover:not(:disabled) {
+            background-color: #333;
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn.active-mode {
+            background-color: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .btn-primary {
+            background-color: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: #2563eb;
+        }
+
+        .btn-pick {
+            background-color: rgba(16, 185, 129, 0.15);
+            border-color: var(--pick);
+            color: #34d399;
+        }
+        .btn-pick:hover:not(:disabled) { background-color: var(--pick); color: #000; }
+
+        .btn-review {
+            background-color: rgba(245, 158, 11, 0.15);
+            border-color: var(--review);
+            color: #fbbf24;
+        }
+        .btn-review:hover:not(:disabled) { background-color: var(--review); color: #000; }
+
+        .btn-danger {
+            background-color: rgba(239, 68, 68, 0.15);
+            border-color: var(--reject);
+            color: #f87171;
+        }
+        .btn-danger:hover:not(:disabled) { background-color: var(--reject); color: white; }
+
+        .filter-group .btn.active {
+            background-color: var(--text-main);
+            color: var(--bg-dark);
+            font-weight: 700;
+        }
+
+        /* Top Culling Progress Bar Strip */
+        .top-progress-strip {
+            height: 4px;
+            width: 100%;
+            background-color: #161616;
+            display: flex;
+            overflow: hidden;
+        }
+        .prog-segment-pick { background-color: var(--pick); transition: width 0.25s; }
+        .prog-segment-review { background-color: var(--review); transition: width 0.25s; }
+        .prog-segment-reject { background-color: var(--reject); transition: width 0.25s; }
+
+        /* Workspace Layout */
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr 345px;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .main-stage {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            background-color: #080808;
+        }
+
+        /* LOUPE & COMPARE VIEWPORT */
+        .loupe-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            background: radial-gradient(circle, #181818 0%, #090909 100%);
+        }
+
+        .loupe-container.dragging {
+            cursor: grabbing;
+        }
+
+        .stage-split-wrapper {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .stage-pane {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stage-pane.compare-left {
+            border-right: 2px solid var(--border);
+        }
+
+        .stage-pane img {
+            max-width: 96%;
+            max-height: 94%;
+            object-fit: contain;
+            transform-origin: center center;
+            transition: transform 0.08s ease-out;
+            pointer-events: none;
+        }
+
+        .pane-header-tag {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            background: rgba(15, 15, 15, 0.85);
+            backdrop-filter: blur(4px);
+            border: 1px solid var(--border);
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.74rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 4;
+        }
+
+        /* Floating Zoom Toolbar */
+        .zoom-toolbar {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(20, 20, 20, 0.88);
+            backdrop-filter: blur(6px);
+            border: 1px solid var(--border);
+            padding: 5px 8px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            z-index: 6;
+        }
+
+        .zoom-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            min-width: 46px;
+            text-align: center;
+            color: #60a5fa;
+        }
+
+        .loupe-status-overlay {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            z-index: 5;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        /* GALLERY / FILMSTRIP */
+        .gallery-container {
+            background-color: var(--bg-panel);
+            border-top: 1px solid var(--border);
+            padding: 10px 14px;
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            height: 148px;
+            align-items: center;
+        }
+
+        /* Mode Full Grid */
+        .main-stage.mode-grid .loupe-container {
+            display: none;
+        }
+
+        .main-stage.mode-grid .gallery-container {
+            flex: 1;
+            height: auto;
+            border-top: none;
+            background-color: var(--bg-dark);
+            padding: 18px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+            grid-auto-rows: max-content;
+            gap: 14px;
+            overflow-y: auto;
+            align-content: start;
+        }
+
+        .photo-card {
+            background-color: var(--bg-card);
+            border: 2px solid transparent;
+            border-radius: 7px;
+            overflow: hidden;
+            cursor: pointer;
+            position: relative;
+            flex: 0 0 152px;
+            display: flex;
+            flex-direction: column;
+            transition: border-color 0.15s, transform 0.15s;
+        }
+
+        .main-stage.mode-grid .photo-card {
+            flex: initial;
+        }
+
+        .photo-card.selected-focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+        }
+
+        .photo-card.compare-anchor {
+            border-color: #a855f7;
+            box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.5);
+        }
+
+        .photo-card.status-picked { border-color: var(--pick); }
+        .photo-card.status-review { border-color: var(--review); }
+        .photo-card.status-rejected { border-color: var(--reject); opacity: 0.45; }
+
+        .thumb-wrapper {
+            width: 100%;
+            height: 92px;
+            background-color: #0d0d0d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .main-stage.mode-grid .thumb-wrapper {
+            height: auto;
+            aspect-ratio: 3 / 2;
+        }
+
+        .thumb-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .badge {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.63rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge-anchor {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            background-color: #9333ea;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.62rem;
+            font-weight: 700;
+        }
+
+        .badge-picked { background-color: var(--pick); color: #000; }
+        .badge-review { background-color: var(--review); color: #000; }
+        .badge-rejected { background-color: var(--reject); color: #fff; }
+
+        /* RAW vs JPG ONLY Indicator Pill */
+        .raw-pill {
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+        .raw-pill.has-raw {
+            background-color: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.45);
+        }
+        .raw-pill.jpg-only {
+            background-color: rgba(136, 136, 136, 0.12);
+            color: #777;
+            border: 1px solid #333;
+        }
+
+        .card-info {
+            padding: 5px 8px;
+            font-size: 0.72rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--border);
+        }
+
+        .filename {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 85px;
+        }
+
+        .empty-state {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-muted);
+            gap: 10px;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Sidebar Kanan */
+        .sidebar {
+            background-color: var(--bg-panel);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            justify-content: space-between;
+        }
+
+        .control-pane {
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* Widget Progress Kurasi */
+        .progress-card {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.73rem;
+            font-weight: 600;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 7px;
+            background: #222;
+            border-radius: 99px;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .meta-info {
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            background: var(--bg-dark);
+            padding: 9px 11px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            line-height: 1.55;
+        }
+
+        .meta-info strong { color: var(--text-main); }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 7px;
+        }
+
+        .action-buttons .btn {
+            padding: 9px;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+
+        .btn-action-pick.active { background-color: var(--pick); color: #000; border-color: var(--pick); font-weight: 700; }
+        .btn-action-review.active { background-color: var(--review); color: #000; border-color: var(--review); font-weight: 700; }
+        .btn-action-reject.active { background-color: var(--reject); color: #fff; border-color: var(--reject); font-weight: 700; }
+
+        .export-pane {
+            padding: 12px 14px;
+            background-color: #151515;
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+        }
+
+        .box-section {
+            padding: 8px 10px;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .pick-box { background-color: rgba(16, 185, 129, 0.07); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .review-box { background-color: rgba(245, 158, 11, 0.07); border: 1px solid rgba(245, 158, 11, 0.3); }
+        .disk-box { background-color: rgba(239, 68, 68, 0.07); border: 1px solid rgba(239, 68, 68, 0.3); }
+
+        .input-inline {
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.74rem;
+            width: 100%;
+        }
+
+        .status-progress {
+            font-size: 0.74rem;
+            color: #fbbf24;
+            display: none;
+            text-align: center;
+            padding: 6px;
+            background: rgba(245, 158, 11, 0.12);
+            border-radius: 4px;
+        }
+
+        kbd {
+            background-color: #333;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 0.67rem;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="brand-group">
+        <div class="brand">
+            <span>📷 Photo Culling Studio</span>
+        </div>
+
+        <!-- Mode Tampilan: Loupe, Compare (Side-by-Side), Grid -->
+        <div class="view-switcher">
+            <button class="btn active-mode" id="btnModeLoupe" onclick="setViewMode('loupe')" title="Tampilan 1 Foto Besar (Shortcut: E)">
+                🔍 Loupe (E)
+            </button>
+            <button class="btn" id="btnModeCompare" onclick="setViewMode('compare')" title="Bandingkan 2 Foto Berdampingan (Shortcut: C)">
+                ⚖️ Bandingkan (C)
+            </button>
+            <button class="btn" id="btnModeGrid" onclick="setViewMode('grid')" title="Tampilan Semua Grid (Shortcut: G)">
+                ▦ Grid (G)
+            </button>
+        </div>
+
+        <!-- Kotak Pencarian Cepat Nama File -->
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="🔎 Cari file (mis: 005) [/]" oninput="handleSearch()">
+            <span class="search-clear" id="searchClear" onclick="clearSearch()">✖</span>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-primary" onclick="openFolderWithDiskAccess()">
+            📂 Buka Folder Kamera
+        </button>
+
+        <div class="filter-group" style="display: flex; gap: 4px; flex-wrap: wrap;">
+            <button class="btn active" onclick="setFilter('all')" id="filter-all">Semua (0)</button>
+            <button class="btn" onclick="setFilter('picked')" id="filter-picked">✅ Pilih (0)</button>
+            <button class="btn" onclick="setFilter('review')" id="filter-review">🟡 Tinjau (0)</button>
+            <button class="btn" onclick="setFilter('unflagged')" id="filter-unflagged">⚪ Belum (0)</button>
+            <button class="btn" onclick="setFilter('rejected')" id="filter-rejected">❌ Buang (0)</button>
+        </div>
+    </div>
+</header>
+
+<!-- Bar Persentase Progress Tipis di Atas -->
+<div class="top-progress-strip">
+    <div id="topBarPick" class="prog-segment-pick" style="width: 0%"></div>
+    <div id="topBarReview" class="prog-segment-review" style="width: 0%"></div>
+    <div id="topBarReject" class="prog-segment-reject" style="width: 0%"></div>
+</div>
+
+<div class="workspace">
+    <!-- Area Utama Kiri -->
+    <div class="main-stage" id="mainStage">
+        <div class="loupe-container" id="loupeContainer">
+            <!-- Toolbar Zoom & Compare -->
+            <div class="zoom-toolbar" id="zoomToolbar" style="display: none;">
+                <button class="btn" onclick="adjustZoom(-0.5)" title="Perkecil">➖</button>
+                <span class="zoom-badge" id="zoomLabel">100%</span>
+                <button class="btn" onclick="adjustZoom(0.5)" title="Perbesar">➕</button>
+                <button class="btn" onclick="setExactZoom(2.5)" title="Cek Fokus 250% (Shortcut: Z)">🔍 250%</button>
+                <button class="btn" onclick="resetZoom()" title="Reset Ukuran Pas Layar">Reset</button>
+                <button class="btn" id="btnSwapCompare" onclick="swapComparePhotos()" style="display: none; background: #7e22ce; border-color: #9333ea; color: #fff;" title="Jadikan Foto Kanan sebagai Acuan Kiri (Shortcut: S)">
+                    ⇄ Tukar Acuan (S)
+                </button>
+            </div>
+
+            <div id="loupeContent" class="empty-state">
+                <h3>Klik "📂 Buka Folder Kamera" di Pojok Kanan Atas</h3>
+                <p style="max-width: 500px; line-height: 1.5; font-size: 0.84rem;">
+                    Dilengkapi <strong>Mode Bandingkan 2 Foto (Tombol C)</strong> dengan Sync-Zoom, <strong>Indikator File RAW</strong>, <strong>Pencarian Cepat</strong>, dan <strong>Progress Kurasi</strong>.
+                </p>
+            </div>
+        </div>
+
+        <!-- Filmstrip Bawah / Grid -->
+        <div class="gallery-container" id="gallery"></div>
+    </div>
+
+    <!-- Sidebar Kanan -->
+    <div class="sidebar">
+        <div class="control-pane">
+            <!-- 4. Indikator Progress Kurasi -->
+            <div class="progress-card">
+                <div class="progress-header">
+                    <span style="color: var(--text-muted);">PROGRESS KURASI</span>
+                    <span id="progressText" style="color: #60a5fa;">0% (0 / 0 Foto)</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div id="sideBarPick" class="prog-segment-pick" style="width: 0%"></div>
+                    <div id="sideBarReview" class="prog-segment-review" style="width: 0%"></div>
+                    <div id="sideBarReject" class="prog-segment-reject" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="meta-info" id="metaInfo">
+                <strong>Nama File:</strong> -<br>
+                <strong>Ukuran File:</strong> -<br>
+                <strong>Status File RAW:</strong> -<br>
+                <strong>Status Kurasi:</strong> -
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-action-pick" id="btnPick" onclick="setStatus('picked')" disabled>✅ Pilih (P)</button>
+                <button class="btn btn-action-review" id="btnReview" onclick="setStatus('review')" disabled>🟡 Tinjau Ulang (R)</button>
+                <button class="btn btn-action-reject" id="btnReject" onclick="setStatus('rejected')" disabled>❌ Buang (X)</button>
+                <button class="btn" id="btnUnflag" onclick="setStatus('unflagged')" disabled>⚪ Reset Status (U)</button>
+            </div>
+
+            <div style="font-size: 0.7rem; color: var(--text-muted); background: var(--bg-dark); padding: 8px 10px; border-radius: 6px; line-height: 1.55; border: 1px solid var(--border);">
+                <strong>Pintasan Keyboard Pro:</strong><br>
+                <kbd>←</kbd><kbd>→</kbd> Geser | <kbd>Z</kbd> Zoom 250% | <kbd>C</kbd> Bandingkan 2 Foto | <kbd>S</kbd> Tukar Acuan<br>
+                <kbd>P</kbd> Pilih | <kbd>R</kbd> Tinjau | <kbd>X</kbd> Buang | <kbd>U</kbd> Reset | <kbd>/</kbd> Cari File
+            </div>
+        </div>
+
+        <div class="export-pane">
+            <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-dark); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border);">
+                <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 5px; cursor: pointer; color: #60a5fa; font-weight: 600;">
+                    <input type="checkbox" id="includeRawPair" checked> Ikut Proses RAW (.ARW/.CR2)
+                </label>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <span style="font-size: 0.7rem; color: var(--text-muted);">Mode:</span>
+                    <select id="transferMode" class="input-inline" style="width: auto; padding: 2px 6px;">
+                        <option value="copy">Salin (Copy)</option>
+                        <option value="move">Pindahkan (Move)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="progressStatus" class="status-progress">⏳ Sedang memproses file di disk...</div>
+
+            <!-- 1. Folder Foto Terpilih -->
+            <div class="box-section pick-box">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong style="font-size: 0.73rem; color: #34d399;">1. FOLDER FOTO TERPILIH (PICK)</strong>
+                    <input type="text" id="pickFolderName" class="input-inline" value="_TERPILIH" style="width: 115px;">
+                </div>
+                <button class="btn btn-pick" id="btnExportPick" onclick="processCategoryToFolder('picked', 'pickFolderName')" disabled style="width: 100%; justify-content: center;">
+                    📂 Salin ke "_TERPILIH" (0 File)
+                </button>
+            </div>
+
+            <!-- 2. Folder Tinjau Ulang -->
+            <div class="box-section review-box">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong style="font-size: 0.73rem; color: #fbbf24;">2. FOLDER TINJAU ULANG (REVIEW)</strong>
+                    <input type="text" id="reviewFolderName" class="input-inline" value="_TINJAU_ULANG" style="width: 115px;">
+                </div>
+                <button class="btn btn-review" id="btnExportReview" onclick="processCategoryToFolder('review', 'reviewFolderName')" disabled style="width: 100%; justify-content: center;">
+                    📂 Salin ke "_TINJAU_ULANG" (0 File)
+                </button>
+            </div>
+
+            <!-- 3. Hapus Foto Dibuang -->
+            <div class="box-section disk-box">
+                <strong style="font-size: 0.73rem; color: #f87171;">3. HAPUS FOTO DIBUANG (REJECT)</strong>
+                <button class="btn btn-danger" id="btnDeleteDisk" onclick="deleteRejectedFromDisk()" disabled style="width: 100%; justify-content: center;">
+                    🗑️ Hapus Permanen Foto Dibuang (0 File)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let directoryHandle = null;
+    let photos = [];
+    let rawFilesMap = new Map();
+    let currentIndex = -1;
+    let compareAnchorId = -1; // ID foto acuan di sebelah kiri saat mode Compare (C)
+    let currentFilter = 'all';
+    let searchQuery = '';
+    let viewMode = 'loupe'; // 'loupe', 'compare', 'grid'
+
+    // Variabel State untuk Zoom & Geser (Sync antara foto kiri & kanan)
+    let zoomScale = 1;
+    let panX = 0;
+    let panY = 0;
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+
+    const mainStage = document.getElementById('mainStage');
+    const loupeContainer = document.getElementById('loupeContainer');
+    const loupeContent = document.getElementById('loupeContent');
+    const zoomToolbar = document.getElementById('zoomToolbar');
+    const zoomLabel = document.getElementById('zoomLabel');
+    const btnSwapCompare = document.getElementById('btnSwapCompare');
+    const gallery = document.getElementById('gallery');
+    const metaInfo = document.getElementById('metaInfo');
+    const progressStatus = document.getElementById('progressStatus');
+    const searchInput = document.getElementById('searchInput');
+    const searchClear = document.getElementById('searchClear');
+
+    document.getElementById('pickFolderName').addEventListener('input', updateCounters);
+    document.getElementById('reviewFolderName').addEventListener('input', updateCounters);
+    document.getElementById('transferMode').addEventListener('change', updateCounters);
+
+    // FUNGSI PENCARIAN CEPAT
+    function handleSearch() {
+        searchQuery = searchInput.value.trim().toLowerCase();
+        searchClear.style.display = searchQuery ? 'block' : 'none';
+        renderGallery();
+    }
+
+    function clearSearch() {
+        searchInput.value = '';
+        searchQuery = '';
+        searchClear.style.display = 'none';
+        renderGallery();
+    }
+
+    function getVisiblePhotos() {
+        return photos.filter(p => {
+            const matchStatus = currentFilter === 'all' ? true : p.status === currentFilter;
+            const matchSearch = !searchQuery || p.name.toLowerCase().includes(searchQuery);
+            return matchStatus && matchSearch;
+        });
+    }
+
+    // FUNGSI GANTI MODE TAMPILAN (LOUPE / COMPARE / GRID)
+    function setViewMode(mode) {
+        if (mode === 'compare' && photos.length > 0) {
+            if (compareAnchorId === -1 || !photos.some(p => p.id === compareAnchorId)) {
+                compareAnchorId = currentIndex !== -1 ? currentIndex : photos[0].id;
+            }
+            // Jika foto kanan masih sama dengan foto kiri, otomatis geser foto kanan ke foto berikutnya
+            if (currentIndex === compareAnchorId) {
+                const visible = getVisiblePhotos();
+                const pos = visible.findIndex(p => p.id === currentIndex);
+                if (pos !== -1 && pos + 1 < visible.length) {
+                    currentIndex = visible[pos + 1].id;
+                } else if (pos > 0) {
+                    currentIndex = visible[pos - 1].id;
+                }
+            }
+        }
+
+        viewMode = mode;
+        mainStage.classList.toggle('mode-grid', mode === 'grid');
+        document.getElementById('btnModeLoupe').classList.toggle('active-mode', mode === 'loupe');
+        document.getElementById('btnModeCompare').classList.toggle('active-mode', mode === 'compare');
+        document.getElementById('btnModeGrid').classList.toggle('active-mode', mode === 'grid');
+        btnSwapCompare.style.display = mode === 'compare' ? 'inline-flex' : 'none';
+
+        renderGallery();
+        if (currentIndex !== -1) {
+            renderStageView();
+        }
+    }
+
+    function swapComparePhotos() {
+        if (viewMode !== 'compare' || compareAnchorId === -1 || currentIndex === -1) return;
+        const temp = compareAnchorId;
+        compareAnchorId = currentIndex;
+        currentIndex = temp;
+        renderGallery();
+        selectPhoto(currentIndex, false);
+    }
+
+    // FITUR SYNC ZOOM & DRAG PADA LOUPE & COMPARE VIEW
+    function applyZoomTransform(disableTransition = false) {
+        const imgs = document.querySelectorAll('.zoomable-stage-img');
+        imgs.forEach(img => {
+            img.style.transition = disableTransition ? 'none' : 'transform 0.08s ease-out';
+            img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomScale})`;
+        });
+        zoomLabel.innerText = `${Math.round(zoomScale * 100)}%`;
+    }
+
+    function resetZoom() {
+        zoomScale = 1;
+        panX = 0;
+        panY = 0;
+        applyZoomTransform();
+    }
+
+    function adjustZoom(delta) {
+        zoomScale = Math.min(Math.max(1, zoomScale + delta), 5);
+        if (zoomScale === 1) { panX = 0; panY = 0; }
+        applyZoomTransform();
+    }
+
+    function setExactZoom(targetScale) {
+        if (zoomScale === targetScale) {
+            resetZoom();
+        } else {
+            zoomScale = targetScale;
+            applyZoomTransform();
+        }
+    }
+
+    loupeContainer.addEventListener('wheel', (e) => {
+        if (photos.length === 0) return;
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 0.35 : -0.35;
+        zoomScale = Math.min(Math.max(1, zoomScale + delta), 5);
+        if (zoomScale === 1) { panX = 0; panY = 0; }
+        applyZoomTransform();
+    }, { passive: false });
+
+    loupeContainer.addEventListener('dblclick', (e) => {
+        if (e.target.closest('.zoom-toolbar')) return;
+        setExactZoom(2.5);
+    });
+
+    loupeContainer.addEventListener('mousedown', (e) => {
+        if (zoomScale <= 1 || e.target.closest('.zoom-toolbar')) return;
+        isDragging = true;
+        loupeContainer.classList.add('dragging');
+        startX = e.clientX - panX;
+        startY = e.clientY - panY;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        panX = e.clientX - startX;
+        panY = e.clientY - startY;
+        applyZoomTransform(true);
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (!isDragging) return;
+        isDragging = false;
+        loupeContainer.classList.remove('dragging');
+        applyZoomTransform(false);
+    });
+
+    async function openFolderWithDiskAccess() {
+        if (!('showDirectoryPicker' in window)) {
+            alert('Gunakan Google Chrome atau Microsoft Edge versi terbaru di PC/Laptop.');
+            return;
+        }
+
+        try {
+            directoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+            
+            photos.forEach(p => URL.revokeObjectURL(p.url));
+            photos = [];
+            rawFilesMap.clear();
+
+            let tempImageEntries = [];
+
+            for await (const entry of directoryHandle.values()) {
+                if (entry.kind === 'file') {
+                    const ext = entry.name.split('.').pop().toLowerCase();
+                    const baseName = entry.name.replace(/\.[^/.]+$/, "");
+
+                    if (['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
+                        const fileData = await entry.getFile();
+                        tempImageEntries.push({ entry, fileData, baseName });
+                    } else if (['arw', 'cr2', 'cr3', 'nef', 'dng', 'raf'].includes(ext)) {
+                        rawFilesMap.set(baseName.toLowerCase(), {
+                            fullName: entry.name,
+                            ext: ext.toUpperCase()
+                        });
+                    }
+                }
+            }
+
+            tempImageEntries.sort((a, b) => a.fileData.name.localeCompare(b.fileData.name));
+
+            photos = tempImageEntries.map((item, idx) => {
+                const rawInfo = rawFilesMap.get(item.baseName.toLowerCase()) || null;
+                return {
+                    id: idx,
+                    name: item.fileData.name,
+                    baseName: item.baseName,
+                    rawPair: rawInfo ? rawInfo.fullName : null,
+                    rawExt: rawInfo ? rawInfo.ext : null,
+                    size: (item.fileData.size / (1024 * 1024)).toFixed(2) + ' MB',
+                    url: URL.createObjectURL(item.fileData),
+                    status: 'unflagged'
+                };
+            });
+
+            if (photos.length === 0) {
+                alert('Tidak ditemukan file gambar (JPG/PNG) di folder tersebut.');
+                return;
+            }
+
+            zoomToolbar.style.display = 'flex';
+            currentIndex = photos[0].id;
+            compareAnchorId = photos[0].id;
+            renderGallery();
+            selectPhoto(currentIndex);
+            updateCounters();
+
+        } catch (err) {
+            console.log('Batal memilih folder:', err);
+        }
+    }
+
+    function getStatusBadgeHTML(status) {
+        if (status === 'picked') return `<span class="badge badge-picked">Pilih</span>`;
+        if (status === 'review') return `<span class="badge badge-review">Tinjau</span>`;
+        if (status === 'rejected') return `<span class="badge badge-rejected">Buang</span>`;
+        return '';
+    }
+
+    function renderGallery() {
+        gallery.innerHTML = '';
+
+        const filtered = getVisiblePhotos();
+
+        if (filtered.length === 0) {
+            gallery.innerHTML = `<div class="empty-state"><p>Tidak ada foto yang cocok dengan filter / pencarian.</p></div>`;
+            return;
+        }
+
+        filtered.forEach((photo) => {
+            const isFocus = photo.id === currentIndex;
+            const isAnchor = viewMode === 'compare' && photo.id === compareAnchorId;
+
+            const card = document.createElement('div');
+            card.className = `photo-card status-${photo.status} ${isFocus ? 'selected-focus' : ''} ${isAnchor ? 'compare-anchor' : ''}`;
+            card.id = `card-${photo.id}`;
+            card.onclick = (e) => {
+                // Jika tahan Shift + Klik di mode Compare, ganti foto Acuan Kiri
+                if (viewMode === 'compare' && e.shiftKey) {
+                    compareAnchorId = photo.id;
+                    renderGallery();
+                    renderStageView();
+                } else {
+                    selectPhoto(photo.id);
+                }
+            };
+            card.ondblclick = () => {
+                selectPhoto(photo.id);
+                if (viewMode === 'grid') setViewMode('loupe');
+            };
+
+            const anchorBadge = isAnchor ? `<span class="badge-anchor">📌 ACUAN (A)</span>` : '';
+            const rawBadgeHTML = photo.rawPair
+                ? `<span class="raw-pill has-raw" title="File RAW Tersedia: ${photo.rawPair}">+${photo.rawExt}</span>`
+                : `<span class="raw-pill jpg-only" title="Tidak ada file RAW pasangan">JPG</span>`;
+
+            card.innerHTML = `
+                <div class="thumb-wrapper">
+                    <img src="${photo.url}" loading="lazy" alt="${photo.name}">
+                    ${anchorBadge}
+                    ${getStatusBadgeHTML(photo.status)}
+                </div>
+                <div class="card-info">
+                    <span class="filename" title="${photo.name}">${photo.name}</span>
+                    ${rawBadgeHTML}
+                </div>
+            `;
+            gallery.appendChild(card);
+        });
+    }
+
+    function renderStageView() {
+        const currentPhoto = photos.find(p => p.id === currentIndex);
+        if (!currentPhoto) return;
+
+        loupeContent.className = 'stage-split-wrapper';
+
+        if (viewMode === 'compare') {
+            const anchorPhoto = photos.find(p => p.id === compareAnchorId) || currentPhoto;
+
+            loupeContent.innerHTML = `
+                <!-- Panel Kiri: Foto Acuan (A) -->
+                <div class="stage-pane compare-left">
+                    <img class="zoomable-stage-img" src="${anchorPhoto.url}" alt="${anchorPhoto.name}">
+                    <div class="pane-header-tag">
+                        <strong style="color:#c084fc">📌 ACUAN (A):</strong> ${anchorPhoto.name}
+                        ${anchorPhoto.rawPair ? `<span class="raw-pill has-raw">+${anchorPhoto.rawExt}</span>` : `<span class="raw-pill jpg-only">JPG ONLY</span>`}
+                    </div>
+                </div>
+                <!-- Panel Kanan: Foto Pembanding Aktif (B) -->
+                <div class="stage-pane">
+                    <img class="zoomable-stage-img" src="${currentPhoto.url}" alt="${currentPhoto.name}">
+                    <div class="pane-header-tag">
+                        <strong style="color:#60a5fa">🔍 PEMBANDING (B - Aktif):</strong> ${currentPhoto.name}
+                        ${currentPhoto.rawPair ? `<span class="raw-pill has-raw">+${currentPhoto.rawExt}</span>` : `<span class="raw-pill jpg-only">JPG ONLY</span>`}
+                    </div>
+                </div>
+            `;
+        } else {
+            let statusOverlay = '';
+            if (currentPhoto.status === 'picked') statusOverlay = `<div class="loupe-status-overlay badge-picked">✅ TERPILIH (PICK)</div>`;
+            else if (currentPhoto.status === 'review') statusOverlay = `<div class="loupe-status-overlay badge-review">🟡 TINJAU ULANG</div>`;
+            else if (currentPhoto.status === 'rejected') statusOverlay = `<div class="loupe-status-overlay badge-rejected">❌ DIBUANG (REJECT)</div>`;
+
+            loupeContent.innerHTML = `
+                <div class="stage-pane">
+                    ${statusOverlay}
+                    <img class="zoomable-stage-img" src="${currentPhoto.url}" alt="${currentPhoto.name}">
+                    <div class="pane-header-tag">
+                        <strong>${currentPhoto.name}</strong> (${currentPhoto.size})
+                        ${currentPhoto.rawPair ? `<span class="raw-pill has-raw">+${currentPhoto.rawExt} TERDETEKSI</span>` : `<span class="raw-pill jpg-only">HANYA JPG (TANPA RAW)</span>`}
+                    </div>
+                </div>
+            `;
+        }
+
+        applyZoomTransform(true);
+    }
+
+    function selectPhoto(id, shouldResetZoom = true) {
+        const photo = photos.find(p => p.id === id);
+        if (!photo) return;
+
+        currentIndex = id;
+        // Jika di mode Loupe biasa, foto acuan otomatis mengikuti foto yang sedang dipilih
+        if (viewMode !== 'compare') {
+            compareAnchorId = id;
+        }
+        if (shouldResetZoom && viewMode !== 'compare') {
+            resetZoom();
+        }
+
+        document.querySelectorAll('.photo-card').forEach(el => el.classList.remove('selected-focus'));
+        const activeCard = document.getElementById(`card-${id}`);
+        if (activeCard) {
+            activeCard.classList.add('selected-focus');
+            activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+
+        renderStageView();
+
+        const statusLabel = {
+            'picked': '<span style="color:#34d399">✅ Terpilih (Pick)</span>',
+            'review': '<span style="color:#fbbf24">🟡 Tinjau Ulang (Review)</span>',
+            'rejected': '<span style="color:#f87171">❌ Ditandai Buang (Reject)</span>',
+            'unflagged': '⚪ Belum Ditandai'
+        }[photo.status];
+
+        const rawStatusLabel = photo.rawPair
+            ? `<span class="raw-pill has-raw">✅ Lengkap (${photo.rawPair})</span>`
+            : `<span class="raw-pill jpg-only">⚠️ Hanya JPG (Tanpa File RAW)</span>`;
+
+        metaInfo.innerHTML = `
+            <strong>Nama File:</strong> ${photo.name}<br>
+            <strong>Ukuran File:</strong> ${photo.size}<br>
+            <strong>Status File RAW:</strong> ${rawStatusLabel}<br>
+            <strong>Status Kurasi:</strong> ${statusLabel}
+        `;
+
+        document.getElementById('btnPick').disabled = false;
+        document.getElementById('btnReview').disabled = false;
+        document.getElementById('btnUnflag').disabled = false;
+        document.getElementById('btnReject').disabled = false;
+
+        document.getElementById('btnPick').classList.toggle('active', photo.status === 'picked');
+        document.getElementById('btnReview').classList.toggle('active', photo.status === 'review');
+        document.getElementById('btnReject').classList.toggle('active', photo.status === 'rejected');
+    }
+
+    function setStatus(newStatus) {
+        if (currentIndex === -1 || photos.length === 0) return;
+        const photo = photos.find(p => p.id === currentIndex);
+        if (!photo) return;
+
+        photo.status = newStatus;
+        updateCounters();
+        renderGallery();
+        selectPhoto(currentIndex, false);
+        navigateNext(1);
+    }
+
+    async function transferSingleFile(fileName, targetDirHandle, isMove) {
+        const srcFileHandle = await directoryHandle.getFileHandle(fileName);
+        const fileData = await srcFileHandle.getFile();
+
+        const destFileHandle = await targetDirHandle.getFileHandle(fileName, { create: true });
+        const writable = await destFileHandle.createWritable();
+        await writable.write(fileData);
+        await writable.close();
+
+        if (isMove) {
+            await directoryHandle.removeEntry(fileName);
+        }
+    }
+
+    async function processCategoryToFolder(targetStatus, inputId) {
+        if (!directoryHandle) return;
+
+        const targetPhotos = photos.filter(p => p.status === targetStatus);
+        if (targetPhotos.length === 0) return;
+
+        const defaultName = targetStatus === 'picked' ? '_TERPILIH' : '_TINJAU_ULANG';
+        const folderName = document.getElementById(inputId).value.trim() || defaultName;
+        const mode = document.getElementById('transferMode').value;
+        const isMove = mode === 'move';
+        const includeRaw = document.getElementById('includeRawPair').checked;
+
+        const labelKategori = targetStatus === 'picked' ? 'Terpilih (Pick)' : 'Tinjau Ulang (Review)';
+        const actionText = isMove ? 'MEMINDAHKAN' : 'MENYALIN';
+        const confirmMsg = `Anda akan ${actionText} ${targetPhotos.length} foto kategori [${labelKategori}]${includeRaw ? ' beserta file RAW pasangannya' : ''} ke dalam sub-folder "${folderName}".\n\nLanjutkan?`;
+
+        if (!confirm(confirmMsg)) return;
+
+        progressStatus.style.display = 'block';
+        document.getElementById('btnExportPick').disabled = true;
+        document.getElementById('btnExportReview').disabled = true;
+
+        try {
+            const targetDirHandle = await directoryHandle.getDirectoryHandle(folderName, { create: true });
+            let successCount = 0;
+
+            for (const photo of targetPhotos) {
+                try {
+                    progressStatus.innerText = `⏳ Memproses ${photo.name} ke ${folderName}...`;
+                    await transferSingleFile(photo.name, targetDirHandle, isMove);
+                    successCount++;
+
+                    if (includeRaw && photo.rawPair) {
+                        try {
+                            progressStatus.innerText = `⏳ Memproses RAW ${photo.rawPair}...`;
+                            await transferSingleFile(photo.rawPair, targetDirHandle, isMove);
+                        } catch (rawErr) {
+                            console.warn('Gagal memproses pasangan RAW:', photo.rawPair, rawErr);
+                        }
+                    }
+
+                    if (isMove) URL.revokeObjectURL(photo.url);
+                } catch (err) {
+                    console.error('Gagal memproses file:', photo.name, err);
+                }
+            }
+
+            if (isMove) {
+                photos = photos.filter(p => p.status !== targetStatus);
+            }
+
+            alert(`Selesai! ${successCount} foto berhasil ${isMove ? 'dipindahkan' : 'disalin'} ke folder "${folderName}".`);
+
+            if (photos.length > 0) {
+                currentIndex = photos[0].id;
+                compareAnchorId = photos[0].id;
+                renderGallery();
+                selectPhoto(currentIndex);
+            } else {
+                gallery.innerHTML = '';
+                loupeContent.innerHTML = `<div class="empty-state"><p>Semua foto telah diproses.</p></div>`;
+            }
+
+        } catch (err) {
+            alert('Terjadi kesalahan saat membuat sub-folder: ' + err.message);
+        } finally {
+            progressStatus.style.display = 'none';
+            updateCounters();
+        }
+    }
+
+    async function deleteRejectedFromDisk() {
+        if (!directoryHandle) return;
+
+        const rejectedPhotos = photos.filter(p => p.status === 'rejected');
+        if (rejectedPhotos.length === 0) return;
+
+        const includeRaw = document.getElementById('includeRawPair').checked;
+        const confirmMsg = `PERINGATAN: Anda akan menghapus PERMANEN ${rejectedPhotos.length} foto yang ditandai Buang dari disk${includeRaw ? ' (beserta file RAW/.ARW pasangannya)' : ''}.\n\nLanjutkan?`;
+
+        if (!confirm(confirmMsg)) return;
+
+        progressStatus.style.display = 'block';
+        let deletedCount = 0;
+
+        for (const photo of rejectedPhotos) {
+            try {
+                progressStatus.innerText = `🗑️ Menghapus ${photo.name}...`;
+                await directoryHandle.removeEntry(photo.name);
+                URL.revokeObjectURL(photo.url);
+                deletedCount++;
+
+                if (includeRaw && photo.rawPair) {
+                    try {
+                        await directoryHandle.removeEntry(photo.rawPair);
+                    } catch (rawErr) {
+                        console.warn('Gagal menghapus pasangan RAW:', photo.rawPair, rawErr);
+                    }
+                }
+            } catch (err) {
+                console.error('Gagal menghapus file:', photo.name, err);
+            }
+        }
+
+        photos = photos.filter(p => p.status !== 'rejected');
+        progressStatus.style.display = 'none';
+        alert(`Berhasil menghapus ${deletedCount} foto dari disk!`);
+
+        if (photos.length > 0) {
+            currentIndex = photos[0].id;
+            compareAnchorId = photos[0].id;
+            renderGallery();
+            selectPhoto(currentIndex);
+        } else {
+            gallery.innerHTML = '';
+            loupeContent.innerHTML = `<div class="empty-state"><p>Semua foto telah diproses.</p></div>`;
+        }
+
+        updateCounters();
+    }
+
+    function setFilter(filter) {
+        currentFilter = filter;
+        document.querySelectorAll('.filter-group .btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`filter-${filter}`).classList.add('active');
+        renderGallery();
+    }
+
+    function updateCounters() {
+        const allCount = photos.length;
+        const pickedCount = photos.filter(p => p.status === 'picked').length;
+        const reviewCount = photos.filter(p => p.status === 'review').length;
+        const unflaggedCount = photos.filter(p => p.status === 'unflagged').length;
+        const rejectedCount = photos.filter(p => p.status === 'rejected').length;
+
+        document.getElementById('filter-all').innerText = `Semua (${allCount})`;
+        document.getElementById('filter-picked').innerText = `✅ Pilih (${pickedCount})`;
+        document.getElementById('filter-review').innerText = `🟡 Tinjau (${reviewCount})`;
+        document.getElementById('filter-unflagged').innerText = `⚪ Belum (${unflaggedCount})`;
+        document.getElementById('filter-rejected').innerText = `❌ Buang (${rejectedCount})`;
+
+        // Update Progress Bar Kurasi
+        const culledCount = pickedCount + reviewCount + rejectedCount;
+        const pctTotal = allCount > 0 ? Math.round((culledCount / allCount) * 100) : 0;
+        const pctPick = allCount > 0 ? (pickedCount / allCount) * 100 : 0;
+        const pctReview = allCount > 0 ? (reviewCount / allCount) * 100 : 0;
+        const pctReject = allCount > 0 ? (rejectedCount / allCount) * 100 : 0;
+
+        document.getElementById('progressText').innerText = `${pctTotal}% Selesai (${culledCount}/${allCount})`;
+        document.getElementById('topBarPick').style.width = `${pctPick}%`;
+        document.getElementById('topBarReview').style.width = `${pctReview}%`;
+        document.getElementById('topBarReject').style.width = `${pctReject}%`;
+
+        document.getElementById('sideBarPick').style.width = `${pctPick}%`;
+        document.getElementById('sideBarReview').style.width = `${pctReview}%`;
+        document.getElementById('sideBarReject').style.width = `${pctReject}%`;
+
+        // Update Tombol Eksekusi
+        const isMove = document.getElementById('transferMode').value === 'move';
+        const actionVerb = isMove ? 'Pindahkan' : 'Salin';
+
+        const pickFolder = document.getElementById('pickFolderName').value.trim() || '_TERPILIH';
+        const btnPick = document.getElementById('btnExportPick');
+        btnPick.innerText = `📂 ${actionVerb} ke "${pickFolder}" (${pickedCount} File)`;
+        btnPick.disabled = pickedCount === 0;
+
+        const reviewFolder = document.getElementById('reviewFolderName').value.trim() || '_TINJAU_ULANG';
+        const btnReview = document.getElementById('btnExportReview');
+        btnReview.innerText = `📂 ${actionVerb} ke "${reviewFolder}" (${reviewCount} File)`;
+        btnReview.disabled = reviewCount === 0;
+
+        const btnDelete = document.getElementById('btnDeleteDisk');
+        btnDelete.innerText = `🗑️ Hapus Permanen Foto Dibuang (${rejectedCount} File)`;
+        btnDelete.disabled = rejectedCount === 0;
+    }
+
+    function navigateNext(direction) {
+        const visiblePhotos = getVisiblePhotos();
+        if (visiblePhotos.length === 0) return;
+
+        const currentPos = visiblePhotos.findIndex(p => p.id === currentIndex);
+        let nextPos = currentPos + direction;
+
+        // Di mode Compare, lewati foto yang sedang menjadi Acuan Kiri supaya tidak membandingkan foto yang sama
+        if (viewMode === 'compare' && nextPos >= 0 && nextPos < visiblePhotos.length) {
+            if (visiblePhotos[nextPos].id === compareAnchorId) {
+                nextPos += direction;
+            }
+        }
+
+        if (nextPos >= 0 && nextPos < visiblePhotos.length) {
+            selectPhoto(visiblePhotos[nextPos].id, false);
+        }
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (document.activeElement.tagName === 'INPUT') {
+            if (e.key === 'Escape') {
+                document.activeElement.blur();
+                clearSearch();
+            }
+            return;
+        }
+        if (photos.length === 0) return;
+
+        const key = e.key.toLowerCase();
+        if (key === 'p') { e.preventDefault(); setStatus('picked'); }
+        else if (key === 'r' || key === 't') { e.preventDefault(); setStatus('review'); }
+        else if (key === 'x') { e.preventDefault(); setStatus('rejected'); }
+        else if (key === 'u') { e.preventDefault(); setStatus('unflagged'); }
+        else if (key === 'z') { e.preventDefault(); setExactZoom(2.5); }
+        else if (key === 'g') { e.preventDefault(); setViewMode('grid'); }
+        else if (key === 'e') { e.preventDefault(); setViewMode('loupe'); }
+        else if (key === 'c') { e.preventDefault(); setViewMode(viewMode === 'compare' ? 'loupe' : 'compare'); }
+        else if (key === 's' && viewMode === 'compare') { e.preventDefault(); swapComparePhotos(); }
+        else if (e.key === '/') { e.preventDefault(); searchInput.focus(); }
+        else if (e.key === 'ArrowRight') { e.preventDefault(); navigateNext(1); }
+        else if (e.key === 'ArrowLeft') { e.preventDefault(); navigateNext(-1); }
+    });
+</script>
+
+</body>
+</html>
